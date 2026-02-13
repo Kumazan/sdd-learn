@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SDD × OpenSpec 學習指南</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #FAF8F5;
+  --fg: #1a1a1a;
+  --muted: #6b6560;
+  --faint: #c4bfb8;
+  --accent: #c44b2b;
+  --accent-soft: #f3e0d8;
+  --card: #fff;
+  --code-bg: #2b2926;
+  --code-fg: #e8e0d6;
+  --chapter-dot: #c44b2b;
+  --serif: 'Noto Serif TC', serif;
+  --sans: 'Noto Sans TC', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.8;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ---- NAV ---- */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(250,248,245,0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--faint);
+  padding: 0 1.25rem;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nav-title {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 1.05rem;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+.nav-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+  width: 0%;
+}
+.nav-menu-btn {
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: var(--fg);
+  padding: 4px;
+}
+
+/* ---- TOC DRAWER ---- */
+.toc-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.toc-overlay.open { opacity: 1; pointer-events: all; }
+
+.toc-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(320px, 85vw);
+  height: 100%;
+  background: var(--bg);
+  z-index: 201;
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+  padding: 1.5rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.toc-overlay.open .toc-drawer { transform: translateX(0); }
+
+.toc-header {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 1.2rem;
+  color: var(--accent);
+}
+.toc-list { list-style: none; }
+.toc-list li { margin-bottom: 0.6rem; }
+.toc-list a {
+  text-decoration: none;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 500;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  transition: color 0.2s;
+}
+.toc-list a:hover, .toc-list a.active { color: var(--accent); }
+.toc-num {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--faint);
+  min-width: 1.8rem;
+}
+
+/* ---- HERO ---- */
+.hero {
+  padding: 3.5rem 1.5rem 2.5rem;
+  text-align: center;
+}
+.hero-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 0.3rem 0.8rem;
+  border-radius: 99px;
+  margin-bottom: 1.2rem;
+}
+.hero h1 {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: clamp(2rem, 8vw, 3rem);
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.8rem;
+}
+.hero h1 span { color: var(--accent); }
+.hero-sub {
+  font-size: 1rem;
+  color: var(--muted);
+  max-width: 380px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* ---- CHAPTER ---- */
+.chapter {
+  padding: 2.5rem 1.5rem;
+  max-width: 640px;
+  margin: 0 auto;
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.chapter.visible { opacity: 1; transform: translateY(0); }
+
+.chapter-num {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.chapter-num::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--chapter-dot);
+  flex-shrink: 0;
+}
+
+.chapter h2 {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 1.6rem;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  margin-bottom: 1.2rem;
+}
+
+.chapter h3 {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.15rem;
+  margin-top: 2rem;
+  margin-bottom: 0.8rem;
+  color: var(--fg);
+}
+
+.chapter p {
+  margin-bottom: 1rem;
+  color: var(--fg);
+  font-weight: 300;
+}
+
+.chapter strong { font-weight: 700; color: var(--fg); }
+
+.chapter ul, .chapter ol {
+  margin-bottom: 1rem;
+  padding-left: 1.2rem;
+}
+.chapter li {
+  margin-bottom: 0.4rem;
+  font-weight: 300;
+}
+
+/* ---- CALLOUT ---- */
+.callout {
+  background: var(--accent-soft);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 12px 12px 0;
+  padding: 1rem 1.2rem;
+  margin: 1.2rem 0;
+  font-size: 0.92rem;
+}
+.callout-icon { margin-right: 0.4rem; }
+.callout p { margin-bottom: 0; }
+
+.callout-dark {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border-left-color: var(--accent);
+}
+
+/* ---- CODE ---- */
+pre {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.7;
+}
+code {
+  font-family: var(--mono);
+  font-size: 0.88em;
+  background: var(--accent-soft);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+}
+pre code { background: none; padding: 0; font-size: 1em; }
+
+.cmd { color: #7ec699; }
+.flag { color: #e8bf6a; }
+.comment { color: #666; }
+.output { color: #999; }
+
+/* ---- FLOW DIAGRAM ---- */
+.flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 1.5rem 0;
+  flex-wrap: wrap;
+}
+.flow-step {
+  background: var(--card);
+  border: 2px solid var(--faint);
+  border-radius: 12px;
+  padding: 0.6rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: center;
+  min-width: 80px;
+  transition: border-color 0.3s, transform 0.3s;
+}
+.flow-step:hover { border-color: var(--accent); transform: translateY(-2px); }
+.flow-step.active { border-color: var(--accent); background: var(--accent-soft); }
+.flow-arrow { color: var(--faint); font-size: 1.2rem; }
+
+/* ---- FILE TREE ---- */
+.file-tree {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  margin: 1rem 0;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.8;
+}
+.file-tree .dir { color: #7ec699; }
+.file-tree .file { color: #e8bf6a; }
+.file-tree .desc { color: #888; }
+
+/* ---- TABLE ---- */
+.compare-grid {
+  display: grid;
+  gap: 0.8rem;
+  margin: 1rem 0;
+}
+.compare-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--faint);
+}
+.compare-card h4 {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 0.4rem;
+}
+.compare-card p {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin-bottom: 0;
+}
+.tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 99px;
+  margin-bottom: 0.4rem;
+}
+.tag-green { background: #d4edda; color: #155724; }
+.tag-yellow { background: #fff3cd; color: #856404; }
+.tag-red { background: #f8d7da; color: #721c24; }
+
+/* ---- STEP CARDS ---- */
+.steps { margin: 1.2rem 0; }
+.step-card {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--faint);
+}
+.step-card:last-child { border-bottom: none; }
+.step-num {
+  font-family: var(--serif);
+  font-weight: 900;
+  font-size: 1.5rem;
+  color: var(--accent);
+  line-height: 1;
+  min-width: 2rem;
+}
+.step-body h4 {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 0.3rem;
+}
+.step-body p {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-bottom: 0;
+}
+
+/* ---- SEPARATOR ---- */
+.sep {
+  text-align: center;
+  padding: 1rem 0;
+  color: var(--faint);
+  font-size: 1.5rem;
+  letter-spacing: 0.5em;
+}
+
+/* ---- FOOTER ---- */
+.footer {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.footer a { color: var(--accent); text-decoration: none; }
+
+/* ---- ANIMATIONS ---- */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.hero { animation: fadeUp 0.8s ease forwards; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <span class="nav-title">SDD × OpenSpec</span>
+  <button class="nav-menu-btn" onclick="toggleTOC()" aria-label="目錄">☰</button>
+  <div class="nav-progress" id="progress"></div>
+</nav>
+
+<!-- TOC -->
+<div class="toc-overlay" id="tocOverlay" onclick="toggleTOC()">
+  <div class="toc-drawer" onclick="event.stopPropagation()">
+    <div class="toc-header">📖 章節目錄</div>
+    <ul class="toc-list" id="tocList"></ul>
+  </div>
+</div>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-badge">Learning Guide 2026</div>
+  <h1>SDD × <span>OpenSpec</span><br>快速學習指南</h1>
+  <p class="hero-sub">從 Vibe Coding 到 Spec-Driven Development，<br>用規格驅動 AI 寫出可控的程式碼。</p>
+</header>
+
+<div class="sep">· · ·</div>
+
+<!-- CH1 -->
+<section class="chapter" id="ch1" data-ch="01" data-title="為什麼需要 SDD？">
+  <div class="chapter-num">Chapter 01</div>
+  <h2>為什麼需要 SDD？</h2>
+
+  <p>你一定遇過這個場景：跟 AI 說「幫我做一個登入功能」，它很快生出一堆程式碼，宣稱「完成了！」但實際測試後才發現——登入成功沒跳轉、密碼錯誤沒處理、用了你從沒見過的套件……</p>
+
+  <p>這不是 AI 的問題，是<strong>方法論</strong>的問題。</p>
+
+  <h3>Vibe Coding 的極限</h3>
+  <p>Andrej Karpathy 提出的 Vibe Coding——「憑感覺寫程式」——在小專案、POC 驗證很好用。但隨著專案變大，問題會浮現：</p>
+  <ul>
+    <li><strong>風格不一致</strong>：每次對話產出的架構可能完全不同</li>
+    <li><strong>遺漏需求</strong>：AI 不會主動問你「密碼格式要限制嗎？」</li>
+    <li><strong>假完成</strong>：AI 很擅長說「我做完了，你應該很滿意」，但測試沒過、邏輯有洞</li>
+  </ul>
+
+  <div class="callout">
+    <span class="callout-icon">💡</span>
+    <p><strong>SDD（Spec-Driven Development）</strong>的核心就一句話：<br><strong>在寫程式之前，先把「什麼叫做完成」寫清楚。</strong></p>
+  </div>
+
+  <p>SDD 不是新發明——「先寫規格再寫程式」的概念在 TDD、BDD 裡都有。但 AI 時代讓它重新爆紅，因為 AI 非常擅長<strong>按照明確規格執行</strong>，卻不擅長<strong>猜測你的模糊意圖</strong>。</p>
+</section>
+
+<div class="sep">· · ·</div>
+
+<!-- CH2 -->
+<section class="chapter" id="ch2" data-ch="02" data-title="SDD 的三個階段">
+  <div class="chapter-num">Chapter 02</div>
+  <h2>SDD 的三個階段</h2>
+
+  <div class="flow">
+    <div class="flow-step active">📋 Requirements</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">🏗️ Design</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">✅ Tasks</div>
+  </div>
+
+  <h3>1. Requirements（需求）</h3>
+  <p>把腦中模糊的想法，變成<strong>可被驗證的需求</strong>。使用 EARS 格式（Easy Approach to Requirements Syntax）：</p>
+
+  <pre><code><span class="cmd">WHEN</span> 使用者輸入正確的 Email 和密碼
+<span class="cmd">THEN</span> 系統 <span class="flag">SHALL</span> 將使用者導向首頁
+
+<span class="cmd">WHEN</span> 密碼錯誤超過三次
+<span class="cmd">THEN</span> 系統 <span class="flag">SHALL</span> 鎖定帳號三十分鐘</code></pre>
+
+  <div class="callout">
+    <span class="callout-icon">📝</span>
+    <p><strong>SHALL</strong> = 必須這樣做（來自 RFC 2119）<br>
+    <strong>SHOULD</strong> = 建議這樣做<br>
+    <strong>MAY</strong> = 可以這樣做</p>
+  </div>
+
+  <h3>2. Design（設計）</h3>
+  <p>有了清晰的需求後，產出技術設計文件：架構圖、資料模型、錯誤處理策略。<strong>在寫程式之前發現問題</strong>，修改成本最低。</p>
+
+  <h3>3. Tasks（任務）</h3>
+  <p>把工作拆成一個個小任務，每個任務都有明確目標和驗收標準。顆粒度的關鍵：<strong>小到你能在合理時間內完成並驗證</strong>。</p>
+</section>
+
+<div class="sep">· · ·</div>
+
+<!-- CH3 -->
+<section class="chapter" id="ch3" data-ch="03" data-title="SDD 的三個層級">
+  <div class="chapter-num">Chapter 03</div>
+  <h2>SDD 的三個層級</h2>
+
+  <p>不同工具對「Spec」的使用深度不同（出自 Martin Fowler 團隊分析）：</p>
+
+  <div class="compare-grid">
+    <div class="compare-card">
+      <span class="tag tag-green">Level 1</span>
+      <h4>Spec-first（規格優先）</h4>
+      <p>寫程式前先寫好規格，任務完成後規格可能就丟了。已經比 Vibe Coding 好很多。</p>
+    </div>
+    <div class="compare-card">
+      <span class="tag tag-yellow">Level 2</span>
+      <h4>Spec-anchored（規格錨定）</h4>
+      <p>規格保留在版本控制裡，隨專案演進更新。修改功能時先改規格，再讓程式碼跟著走。<strong>OpenSpec 屬於這個層級。</strong></p>
+    </div>
+    <div class="compare-card">
+      <span class="tag tag-red">Level 3</span>
+      <h4>Spec-as-source（規格即原始碼）</h4>
+      <p>完全不直接編輯程式碼，只編輯規格，程式碼由規格自動生成。目前仍在實驗階段。</p>
+    </div>
+  </div>
+</section>
+
+<div class="sep">· · ·</div>
+
+<!-- CH4 -->
+<section class="chapter" id="ch4" data-ch="04" data-title="認識 OpenSpec">
+  <div class="chapter-num">Chapter 04</div>
+  <h2>認識 OpenSpec</h2>
+
+  <p>OpenSpec 是目前最輕量、最容易上手的 SDD 工具。它的設計哲學：</p>
+  <ul>
+    <li><strong>Fluid not rigid</strong> — 彈性，不僵化</li>
+    <li><strong>Iterative not waterfall</strong> — 迭代，不瀑布</li>
+    <li><strong>Brownfield-first</strong> — 特別適合既有專案</li>
+    <li><strong>支援 20+ AI 工具</strong> — Claude Code、Cursor、Copilot、Gemini CLI…</li>
+  </ul>
+
+  <h3>vs. 其他工具</h3>
+  <div class="compare-grid">
+    <div class="compare-card">
+      <h4>Kiro（Amazon）</h4>
+      <p>完整但被鎖在特定 IDE，只支援 Claude 模型。</p>
+    </div>
+    <div class="compare-card">
+      <h4>Spec Kit（GitHub）</h4>
+      <p>詳盡但偏重——修一顆螺絲得寫十幾頁報告。</p>
+    </div>
+    <div class="compare-card" style="border-color: var(--accent);">
+      <h4>OpenSpec ⭐</h4>
+      <p>輕量、不需 API key、純 Markdown、任何 AI 工具都能用。</p>
+    </div>
+  </div>
+
+  <h3>核心概念：specs vs. changes</h3>
+  <ul>
+    <li><strong>specs/</strong> = 系統目前的真相（已上線的規格）</li>
+    <li><strong>changes/</strong> = 想要做的變更（進行中的提案）</li>
+    <li><strong>archive/</strong> = 已完成變更的歷史紀錄</li>
+  </ul>
+  <p>這個分離設計讓每次變更的影響範圍一目瞭然，多人協作也不容易踩到彼此。</p>
+</section>
+
+<div class="sep">· · ·</div>
+
+<!-- CH5 -->
+<section class="chapter" id="ch5" data-ch="05" data-title="安裝與初始化">
+  <div class="chapter-num">Chapter 05</div>
+  <h2>安裝與初始化</h2>
+
+  <div class="steps">
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>安裝 OpenSpec</h4>
+        <p>需要 Node.js 20.19.0+</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>專案初始化</h4>
+        <p>在你的專案目錄裡執行 init</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>設定 AI 工具</h4>
+        <p>選擇你使用的 Coding Agent</p>
+      </div>
+    </div>
+  </div>
+
+  <pre><code><span class="comment"># 全域安裝</span>
+<span class="cmd">npm install -g</span> @fission-ai/openspec@latest
+
+<span class="comment"># 進入專案目錄並初始化</span>
+<span class="cmd">cd</span> my-project
+<span class="cmd">openspec</span> init</code></pre>
+
+  <p>初始化後的專案結構：</p>
+
+  <div class="file-tree">
+    <span class="dir">├── CLAUDE.md</span> <span class="desc">← AI 指令入口</span><br>
+    <span class="dir">└── openspec/</span><br>
+    <span class="file">   ├── AGENTS.md</span> <span class="desc">← 工作流程說明</span><br>
+    <span class="dir">   ├── changes/</span> <span class="desc">← 變更提案</span><br>
+    <span class="dir">   │   └── archive/</span> <span class="desc">← 已完成的變更</span><br>
+    <span class="file">   ├── project.md</span> <span class="desc">← 專案基本資訊</span><br>
+    <span class="dir">   └── specs/</span> <span class="desc">← 系統的真相來源</span>
+  </div>
+
+  <div class="callout">
+    <span class="callout-icon">⚠️</span>
+    <p>整個 <code>openspec/</code> 目錄都應該進版控！specs 是系統的真相，changes 讓團隊看到進行中的提案。</p>
+  </div>
+</section>
+
+<div class="sep">· · ·</div>
+
+<!-- CH6 -->
+<section class="chapter" id="ch6" data-ch="06" data-title="三階段工作流程（0.x）">
+  <div class="chapter-num">Chapter 06</div>
+  <h2>三階段工作流程</h2>
+  <p style="font-size:0.85rem; color:var(--muted);">OpenSpec 0.x 版的經典三招，1.0 已進化（見下一章）</p>
+
+  <div class="flow">
+    <div class="flow-step">📝 Proposal</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">⚡ Apply</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">📦 Archive</div>
+  </div>
+
+  <h3>Stage 1：Proposal（草擬提案）</h3>
+  <pre><code><span class="comment"># 用 slash command</span>
+/openspec:proposal 新增使用者搜尋功能
+
+<span class="comment"># 或自然語言</span>
+幫我建立一個 OpenSpec 提案，我想新增使用者搜尋功能</code></pre>
+  <p>AI 會在 <code>openspec/changes/</code> 底下建立：</p>
+  <ul>
+    <li><strong>proposal.md</strong> — Why / What Changes / Impact</li>
+    <li><strong>tasks.md</strong> — 實作待辦清單（checkbox 格式）</li>
+    <li><strong>specs/</strong> — 受影響的規格差異</li>
+  </ul>
+
+  <pre><code><span class="comment"># 建完記得驗證格式！</span>
+<span class="cmd">openspec</span> validate add-user-search <span class="flag">--strict</span></code></pre>
+
+  <h3>Stage 2：Apply（實作）</h3>
+  <pre><code>/openspec:apply add-user-search</code></pre>
+  <p>AI 按照 tasks.md 一個一個完成，每做完一項就把 <code>- [ ]</code> 改成 <code>- [x]</code>。</p>
+
+  <div class="callout">
+    <span class="callout-icon">🎯</span>
+    <p>這就是 SDD 的核心價值：有規格，就有標準來驗收 AI 的產出。不再像 Vibe Coding 做到一半才發現 AI 理解的需求跟你想的不一樣。</p>
+  </div>
+
+  <h3>Stage 3：Archive（歸檔）</h3>
+  <pre><code>/openspec:archive add-user-search</code></pre>
+  <p>歸檔做兩件事：</p>
+  <ol>
+    <li>把 changes 目錄移到 archive（加上日期前綴）</li>
+    <li>把規格差異合併回 specs 目錄</li>
+  </ol>
+  <p>結果：<strong>specs/ 永遠是系統目前的真相，archive/ 保留所有變更歷史</strong>。</p>
+</section>
+
+<div class="sep">· · ·</div>
+
+<!-- CH7 -->
+<section class="chapter" id="ch7" data-ch="07" data-title="OpenSpec 1.0 新功能">
+  <div class="chapter-num">Chapter 07</div>
+  <h2>OpenSpec 1.0 的進化</h2>
+
+  <p>1.0 版把整個架構重新寫過，從「照著固定流程走」變成「你想怎麼走都行」。指令全部改為 <code>/opsx:</code> 開頭。</p>
+
+  <h3>🔓 工作流不再是一直線</h3>
+  <p>0.x 版進了 Apply 就回不去 Proposal。1.0 版所有指令<strong>沒有順序限制</strong>，想什麼時候用就什麼時候用。</p>
+
+  <h3>新指令一覽</h3>
+  <div class="steps">
+    <div class="step-card">
+      <div class="step-num" style="font-size:1rem;">🆕</div>
+      <div class="step-body">
+        <h4>/opsx:new</h4>
+        <p>建立新提案（取代原本的 proposal）</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num" style="font-size:1rem;">💬</div>
+      <div class="step-body">
+        <h4>/opsx:explore</h4>
+        <p>寫提案前先跟 AI 聊想法，不急著產文件</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num" style="font-size:1rem;">▶️</div>
+      <div class="step-body">
+        <h4>/opsx:continue</h4>
+        <p>根據文件相依性，一次建一個檔案，逐步完成</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num" style="font-size:1rem;">⏩</div>
+      <div class="step-body">
+        <h4>/opsx:ff</h4>
+        <p>Fast Forward！一口氣把所有規劃文件生出來</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num" style="font-size:1rem;">⚡</div>
+      <div class="step-body">
+        <h4>/opsx:apply</h4>
+        <p>開始實作，會先讀 tasks.md 算進度再動工</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num" style="font-size:1rem;">📦</div>
+      <div class="step-body">
+        <h4>/opsx:archive</h4>
+        <p>歸檔完成的變更</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>📊 任務進度即時更新</h3>
+  <p>0.x 版的進度更新靠 AI 心情。1.0 版每次 <code>/opsx:apply</code> 會<strong>先讀 tasks.md 計算當前進度</strong>，做完一個就打勾，下次 apply 又重新算。進度終於準確了！</p>
+
+  <pre><code>- [x] 建立資料模型
+- [x] 實作 API 端點
+- [ ] 寫前端介面
+- [ ] 加入錯誤處理
+<span class="output">// → 4 個任務完成 2 個，50%</span></code></pre>
+
+  <h3>🌳 文件相依性自動管理</h3>
+  <p>1.0 用 <strong>DAG（有向無環圖）</strong>管理文件相依性。proposal 是根節點，specs 和 design 依賴它，tasks 又依賴 specs 和 design。系統會自動判斷「下一個可以做的是什麼」。</p>
+
+  <h3>🔧 配置集中管理</h3>
+  <p>新增 <code>openspec/config.yaml</code>，執行指令時會自動帶入，AI 一定看得到你的專案設定。</p>
+</section>
+
+<div class="sep">· · ·</div>
+
+<!-- CH8 -->
+<section class="chapter" id="ch8" data-ch="08" data-title="實戰 Quick Start">
+  <div class="chapter-num">Chapter 08</div>
+  <h2>實戰 Quick Start</h2>
+
+  <p>完整的 1.0 版工作流程，以「新增深色模式」為例：</p>
+
+  <pre><code><span class="comment"># Step 1: 建立提案</span>
+<span class="output">你：</span>/opsx:new add-dark-mode
+<span class="output">AI：</span>Created openspec/changes/add-dark-mode/
+     Ready to create: proposal
+
+<span class="comment"># Step 2: 快轉生成所有規劃文件</span>
+<span class="output">你：</span>/opsx:ff
+<span class="output">AI：</span>✓ proposal.md
+     ✓ specs/
+     ✓ design.md
+     ✓ tasks.md
+     Ready for implementation!
+
+<span class="comment"># Step 3: 開始實作</span>
+<span class="output">你：</span>/opsx:apply
+<span class="output">AI：</span>Implementing tasks...
+     ✓ 1.1 Add theme context provider
+     ✓ 1.2 Create toggle component
+     ✓ 2.1 Add CSS variables
+     ✓ 2.2 Wire up localStorage
+     All tasks complete!
+
+<span class="comment"># Step 4: 歸檔</span>
+<span class="output">你：</span>/opsx:archive
+<span class="output">AI：</span>Archived to archive/2026-02-13-add-dark-mode/
+     Specs updated. ✅</code></pre>
+
+  <h3>什麼時候不需要 OpenSpec？</h3>
+  <ul>
+    <li>🐛 <strong>修 Bug</strong> — 讓程式符合規格，不是改變規格</li>
+    <li>✏️ <strong>改錯字、調格式</strong> — 不影響系統行為</li>
+    <li>📦 <strong>更新依賴（非破壞性）</strong></li>
+    <li>⚙️ <strong>調整設定</strong>（不改變行為規格時）</li>
+    <li>🧪 <strong>補測試</strong> — 只是驗證已定義的行為</li>
+  </ul>
+
+  <div class="callout">
+    <span class="callout-icon">🎯</span>
+    <p>判斷標準：<strong>這次改動會不會讓系統行為跟 specs 裡定義的不一樣？</strong>會 → 建提案。不會 → 直接動手。</p>
+  </div>
+</section>
+
+<div class="sep">· · ·</div>
+
+<!-- CH9 -->
+<section class="chapter" id="ch9" data-ch="09" data-title="常用 CLI 指令">
+  <div class="chapter-num">Chapter 09</div>
+  <h2>常用 CLI 指令速查</h2>
+
+  <pre><code><span class="comment"># 列出進行中的變更</span>
+<span class="cmd">openspec</span> list
+
+<span class="comment"># 列出現有規格</span>
+<span class="cmd">openspec</span> list <span class="flag">--specs</span>
+
+<span class="comment"># 顯示某個變更的詳細內容</span>
+<span class="cmd">openspec</span> show add-dark-mode
+
+<span class="comment"># JSON 格式輸出（方便程式處理）</span>
+<span class="cmd">openspec</span> show add-dark-mode <span class="flag">--json</span>
+
+<span class="comment"># 驗證格式（建議加 --strict）</span>
+<span class="cmd">openspec</span> validate add-dark-mode <span class="flag">--strict</span>
+
+<span class="comment"># 歸檔（跳過確認）</span>
+<span class="cmd">openspec</span> archive add-dark-mode <span class="flag">--yes</span>
+
+<span class="comment"># 互動式 Dashboard</span>
+<span class="cmd">openspec</span> view
+
+<span class="comment"># 除錯：查看 Delta 解析結果</span>
+<span class="cmd">openspec</span> show add-dark-mode <span class="flag">--json --deltas-only</span>
+
+<span class="comment"># 升級 OpenSpec</span>
+<span class="cmd">npm install -g</span> @fission-ai/openspec@latest
+
+<span class="comment"># 刷新專案的 AI 指令</span>
+<span class="cmd">openspec</span> update</code></pre>
+</section>
+
+<div class="sep">· · ·</div>
+
+<!-- CH10 -->
+<section class="chapter" id="ch10" data-ch="10" data-title="Spec 檔案格式詳解">
+  <div class="chapter-num">Chapter 10</div>
+  <h2>Spec 檔案格式詳解</h2>
+
+  <p>spec.md 是 OpenSpec 最重要的檔案。標準格式：</p>
+
+  <pre><code><span class="comment"># User Authentication Specification</span>
+
+<span class="comment">## Purpose</span>
+管理使用者的身份驗證和 Session。
+
+<span class="comment">## Requirements</span>
+
+<span class="comment">### Requirement: User Login</span>
+使用者 <span class="flag">SHALL</span> 能夠使用 Email 和密碼登入系統。
+
+<span class="comment">#### Scenario: 登入成功</span>
+- <span class="cmd">WHEN</span> 使用者輸入正確的 Email 和密碼
+- <span class="cmd">THEN</span> 系統回傳 JWT token
+- <span class="cmd">AND</span> 記錄登入時間
+
+<span class="comment">#### Scenario: 密碼錯誤</span>
+- <span class="cmd">WHEN</span> 使用者輸入錯誤的密碼
+- <span class="cmd">THEN</span> 系統回傳 401 錯誤
+- <span class="cmd">AND</span> 增加失敗次數記錄</code></pre>
+
+  <h3>格式要點</h3>
+  <ul>
+    <li>每個 Requirement <strong>必須</strong>至少有一個 Scenario</li>
+    <li>Scenario 必須用 <code>####</code> 開頭（不是 <code>###</code>！）</li>
+    <li>需求描述用 <strong>SHALL</strong> 或 <strong>MUST</strong>（RFC 2119 慣例）</li>
+    <li>寫完一定要跑 <code>openspec validate --strict</code></li>
+  </ul>
+
+  <div class="callout">
+    <span class="callout-icon">⚠️</span>
+    <p>AI 常犯的錯：把 Scenario 寫成 <code>- **Scenario: xxx**</code> 或 <code>### Scenario</code>。這些格式都<strong>不對</strong>，驗證會失敗！</p>
+  </div>
+</section>
+
+<div class="sep">· · ·</div>
+
+<!-- CH11 -->
+<section class="chapter" id="ch11" data-ch="11" data-title="Spectra GUI 工具">
+  <div class="chapter-num">Chapter 11</div>
+  <h2>Spectra：圖形介面加持</h2>
+
+  <p><strong>Spectra</strong> 是高見龍開發的桌面 GUI 工具，讓 OpenSpec 用起來更直覺。當 specs 目錄裡有幾十個檔案時，不用再在終端機裡跳來跳去。</p>
+
+  <h3>主要功能</h3>
+  <ul>
+    <li>📁 <strong>瀏覽 specs / changes / archive</strong> — 圖形化呈現</li>
+    <li>📊 <strong>即時進度追蹤</strong> — 看到任務一個一個被打勾</li>
+    <li>🔍 <strong>搜尋與篩選</strong> — 快速找到特定規格</li>
+    <li>🎯 <strong>變更影響範圍視覺化</strong> — 一眼看出影響哪些 specs</li>
+  </ul>
+
+  <div class="callout">
+    <span class="callout-icon">🔗</span>
+    <p>詳細介紹：<a href="https://kaochenlong.com/spectra-with-openspec" target="_blank" style="color:var(--accent)">kaochenlong.com/spectra-with-openspec</a></p>
+  </div>
+</section>
+
+<div class="sep">· · ·</div>
+
+<!-- CH12 -->
+<section class="chapter" id="ch12" data-ch="12" data-title="最佳實踐 & Tips">
+  <div class="chapter-num">Chapter 12</div>
+  <h2>最佳實踐 & Tips</h2>
+
+  <h3>🧠 模型選擇</h3>
+  <p>OpenSpec 搭配<strong>高推理能力模型</strong>效果最好。官方推薦 Opus 4.5 和 GPT 5.2。</p>
+
+  <h3>🧹 Context 衛生</h3>
+  <p>開始實作前<strong>清空 context window</strong>。SDD 的好處就是規格都在檔案裡，不怕遺失對話記錄。</p>
+
+  <h3>📐 漸進式導入</h3>
+  <p>既有專案不需要一次把所有規格補齊。從<strong>新功能開始</strong>建立 specs，慢慢累積。</p>
+
+  <h3>🤖 約束 AI</h3>
+  <p>如果 AI 想做規格以外的事，直接告訴它：「這不在提案範圍內，請專注在 tasks.md 列出的項目。」</p>
+
+  <h3>🔄 實作中發現規格有問題？</h3>
+  <p>沒關係！歸檔之前都可以調整。直接修改 proposal.md 或 specs/，改完跑一次 <code>openspec validate</code>，然後繼續實作。</p>
+
+  <h3>📚 延伸閱讀</h3>
+  <ul>
+    <li><a href="https://github.com/Fission-AI/OpenSpec" target="_blank" style="color:var(--accent)">OpenSpec GitHub</a></li>
+    <li><a href="https://kaochenlong.com/sdd-spec-driven-development" target="_blank" style="color:var(--accent)">高見龍：SDD 規格驅動開發</a></li>
+    <li><a href="https://kaochenlong.com/spectra-with-openspec" target="_blank" style="color:var(--accent)">高見龍：Spectra 介紹</a></li>
+    <li><a href="https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html" target="_blank" style="color:var(--accent)">Martin Fowler：SDD 三層級分析</a></li>
+  </ul>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <p>🦐 小蝦 for Kuma · 2026</p>
+  <p>內容參考自 OpenSpec 官方文件、高見龍文章系列、Martin Fowler 團隊分析</p>
+</footer>
+
+<script>
+// TOC
+function toggleTOC() {
+  document.getElementById('tocOverlay').classList.toggle('open');
+}
+
+// Build TOC from chapters
+const chapters = document.querySelectorAll('.chapter');
+const tocList = document.getElementById('tocList');
+chapters.forEach(ch => {
+  const li = document.createElement('li');
+  const a = document.createElement('a');
+  a.href = '#' + ch.id;
+  a.innerHTML = `<span class="toc-num">${ch.dataset.ch}</span> ${ch.dataset.title}`;
+  a.onclick = () => setTimeout(toggleTOC, 200);
+  li.appendChild(a);
+  tocList.appendChild(li);
+});
+
+// Reading progress
+window.addEventListener('scroll', () => {
+  const h = document.documentElement.scrollHeight - window.innerHeight;
+  const p = (window.scrollY / h) * 100;
+  document.getElementById('progress').style.width = p + '%';
+});
+
+// Intersection Observer for fade-in
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+chapters.forEach(ch => observer.observe(ch));
+</script>
+</body>
+</html>
