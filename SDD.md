@@ -25,7 +25,7 @@ Single-page static site (index.html only). No `.gitignore` currently. Same ratio
 - `git status` — must show only `.gitignore` as new file
 
 ### Results
-(populated after run)
+✅ All checks passed — .DS_Store matched, git status clean
 
 ## Rollback
 Delete `.gitignore`. No other changes.
